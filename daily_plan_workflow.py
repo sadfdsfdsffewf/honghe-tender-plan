@@ -154,7 +154,13 @@ def api_post(path: str, payload: dict[str, Any], retries: int = 4) -> dict[str, 
                 API_BASE + path, data=body, headers=HDRS, method="POST"
             )
             with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
-                return json.loads(resp.read().decode("utf-8", "replace"))
+                text = resp.read().decode("utf-8", "replace")
+                try:
+                    return json.loads(text)
+                except json.JSONDecodeError as exc:
+                    raise RuntimeError(
+                        f"接口返回非 JSON: HTTP {resp.status}, body={text[:500]!r}"
+                    ) from exc
         except Exception:
             if attempt == retries - 1:
                 raise
@@ -167,7 +173,13 @@ def api_get(path: str, retries: int = 4) -> dict[str, Any]:
         try:
             req = urllib.request.Request(API_BASE + path, headers=HDRS)
             with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
-                return json.loads(resp.read().decode("utf-8", "replace"))
+                text = resp.read().decode("utf-8", "replace")
+                try:
+                    return json.loads(text)
+                except json.JSONDecodeError as exc:
+                    raise RuntimeError(
+                        f"接口返回非 JSON: HTTP {resp.status}, body={text[:500]!r}"
+                    ) from exc
         except Exception:
             if attempt == retries - 1:
                 raise
