@@ -1,0 +1,49 @@
+name: Daily Honghe tender update
+
+on:
+  schedule:
+    # 05:30 UTC = 13:30 Asia/Shanghai
+    - cron: '30 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: honghe-daily-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install 'openpyxl>=3.1'
+
+      - name: Fetch latest tender information
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python daily_plan_workflow.py --bootstrap-days 180 --cache-hours 0
+
+      - name: Publish generated page
+        run: |
+          cp output/publish/index.html index.html
+          if git diff --quiet -- index.html; then
+            echo "No page changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Daily update $(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M')"
+          git push
