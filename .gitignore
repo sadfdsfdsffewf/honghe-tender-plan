@@ -1,0 +1,7 @@
+_cache_plan/
+_cache_zbgg/
+data/
+logs/
+output/
+*.pyc
+__pycache__/
