@@ -1,0 +1,35 @@
+name: Normalize internal page title
+
+on:
+  push:
+    paths:
+      - index.html
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Normalize title
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('<title>红河州招标计划 · 离线查询</title>', '<title>红河州项目查询(内部版)</title>')
+          s = s.replace('<h1>红河州招标计划</h1>', '<h1>红河州项目查询(内部版)</h1>')
+          p.write_text(s, encoding='utf-8')
+          PY
+          if git diff --quiet -- index.html; then
+            echo "Title already normalized"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Normalize internal page title"
+          git push
