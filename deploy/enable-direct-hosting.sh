@@ -22,30 +22,23 @@ install -o honghe -g honghe -m 0644 "$TMP_DIR/pkg/tencent-cloud-deploy/daily_pla
 install -o honghe -g honghe -m 0755 "$TMP_DIR/pkg/tencent-cloud-deploy/run_update.sh" "$APP_DIR/run_update.sh"
 install -o root -g root -m 0644 "$TMP_DIR/pkg/tencent-cloud-deploy/honghe-tender.timer" /etc/systemd/system/honghe-tender.timer
 
-cat >/etc/systemd/system/honghe-web.service <<'EOF'
-[Unit]
-Description=Honghe tender direct web page
-Wants=network-online.target
-After=network-online.target
+if [[ -f /etc/caddy/Caddyfile && ! -f /etc/caddy/Caddyfile.before-honghe ]]; then
+  cp -a /etc/caddy/Caddyfile /etc/caddy/Caddyfile.before-honghe
+fi
 
-[Service]
-User=honghe
-Group=honghe
-WorkingDirectory=/opt/honghe-tender/output/publish
-ExecStart=/usr/bin/python3 -m http.server 80 --bind 0.0.0.0 --directory /opt/honghe-tender/output/publish
-AmbientCapabilities=CAP_NET_BIND_SERVICE
-CapabilityBoundingSet=CAP_NET_BIND_SERVICE
-NoNewPrivileges=true
-Restart=always
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
+cat >/etc/caddy/Caddyfile <<'EOF'
+:80 {
+    root * /opt/honghe-tender/output/publish
+    encode gzip
+    file_server
+    try_files {path} /index.html
+    header Cache-Control "no-cache, no-store, must-revalidate"
+}
 EOF
 
 systemctl daemon-reload
-systemctl enable --now honghe-web.service
 systemctl restart honghe-tender.timer
+systemctl reload caddy || systemctl restart caddy
 systemctl restart honghe-tender.service
 
 echo "直接访问地址：http://118.24.53.186/"
